@@ -1,0 +1,73 @@
+program sncExample
+
+// Change values here
+
+int cont = 0, i = 0, j = 0, limite = 2;
+
+// Output PVs
+int m = 8;
+float interlock[8];
+assign interlock to {"testeclp:1", "testeclp:2", "testeclp:3", "testeclp:4", "testeclp:5", "testeclp:6", "testeclp:7", "testeclp:8"};
+monitor interlock[0]; monitor interlock[1]; monitor interlock[2]; monitor interlock[3]; monitor interlock[4]; monitor interlock[5];
+monitor interlock[6]; monitor interlock[7];
+
+// Input PVs
+int n = 5;
+float rad[5];
+assign rad to {"RAD:int1-RB", "RAD:int2-RB", "RAD:int3-RB", "RAD:int4-RB", "RAD:int5-RB"};
+monitor rad[0]; monitor rad[1]; monitor rad[2]; monitor rad[3]; monitor rad[4];
+
+// State Machine
+ss ss1 {
+    // State zero
+    state init {
+	  when (delay(1)) {
+	    printf("###  IOC Yokogawa online  ###\n");
+            for (i = 0; i < n; i++) {
+	          if (rad[i] >= limite) {
+                  for (j = 0; j < m; j++){
+                    interlock[j] = 1;
+                    pvPut(interlock[j]);
+                  }
+              }
+            }
+	  } state low
+    }
+
+    // State Close
+    state low {
+	  when () {
+        cont = 0;
+        for (i = 0; i < n; i++) {
+          if (rad[i] >= limite) {
+             cont += 1;
+          }
+        }
+          if (cont == 0) {            
+            for (j = 0; j < m; j++) {
+              interlock[j] = 0;
+              pvPut (interlock[j]);
+            }        
+          }
+	  } state high
+    }
+
+    //State Open
+    state high {
+	  when () {
+        cont = 0;
+        for (i = 0; i < n; i++) {
+          if (rad[i] >= limite) {
+            cont += 1;
+          }
+        }
+        if (cont > 0) { 
+          for (j = 0; j < m; j++) {
+            interlock[j] = 1;
+            pvPut (interlock[j]);
+          }              
+	    }    
+	  } state low
+    }
+}
+
